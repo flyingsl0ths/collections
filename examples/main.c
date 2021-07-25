@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "../src/interfaces/functional/identity.h"
+#include "../src/collections/transformations/identity.h"
 #include "int_array_list.h"
 
 IDENTITY_PTR(int)

@@ -3,8 +3,8 @@
 #include <stdlib.h>
 
 #include "../../interfaces/comparator/comparator.h"
-#include "../../interfaces/functional/transformations/map.h"
 #include "../../interfaces/iterator/iterator.h"
+#include "../transformations/map.h"
 
 #define ARRAY_LIST_HEADER(FPX, TYPE)                                                     \
 	typedef size_t array_list_size_t;                                                    \

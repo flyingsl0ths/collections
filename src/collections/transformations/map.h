@@ -1,11 +1,8 @@
 #pragma once
 
-#include "../aliases/consumer.h"
-#include "../aliases/supplier.h"
+#include "../../interfaces/functional/consumer.h"
+#include "../../interfaces/functional/supplier.h"
 
-// int_list
-// int_array_list
-// int
 #define MAP_HEADER(FPX, CONTAINER_NAME, CONTAINER_VALUE_TYPE)                            \
 	SUPPLIER_T(CONTAINER_NAME)                                                           \
                                                                                          \
