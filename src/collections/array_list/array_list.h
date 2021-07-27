@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "../../interfaces/comparator/comparator.h"
@@ -87,13 +88,13 @@
 	};
 
 #define ARRAY_LIST_SOURCE(FPX, TYPE)                                                     \
-	const array_list_size_t g_DEFAULT_SIZE = 10UL;                                       \
+	static const array_list_size_t g_FIRST_ITEM = 0UL;                                   \
                                                                                          \
-	const array_list_size_t g_FIRST_ITEM = 0UL;                                          \
+	static const array_list_size_t g_EMPTY_LIST = 0UL;                                   \
                                                                                          \
-	const array_list_size_t g_BUFFER_SCALAR = 2UL;                                       \
+	static const array_list_size_t g_DEFAULT_SIZE = 10UL;                                \
                                                                                          \
-	const array_list_size_t g_EMPTY_LIST = 0UL;                                          \
+	static const array_list_size_t g_BUFFER_SCALAR = 2UL;                                \
                                                                                          \
 	ARRAY_LIST_STRUCT_DEFS(TYPE)                                                         \
                                                                                          \
@@ -106,9 +107,11 @@
                                                                                          \
 		if (size == 0UL) {                                                               \
 			instance->data = malloc(sizeof(TYPE*) * g_DEFAULT_SIZE);                     \
+                                                                                         \
 			instance->size = g_DEFAULT_SIZE;                                             \
 		} else {                                                                         \
 			instance->data = malloc(sizeof(TYPE*) * size);                               \
+                                                                                         \
 			instance->size = size;                                                       \
 		}                                                                                \
                                                                                          \
@@ -116,22 +119,17 @@
 	}                                                                                    \
                                                                                          \
 	TYPE* FPX##_at(TYPE##_array_list_t* const instance, const array_list_size_t index) { \
-                                                                                         \
-		if (instance && instance->data) {                                                \
-			if (index < instance->capacity) {                                            \
-				return (instance->data[index]);                                          \
-			}                                                                            \
-		}                                                                                \
-                                                                                         \
-		return NULL;                                                                     \
+		return (instance && (index < instance->capacity) ? (instance->data[index])       \
+														 : NULL);                        \
 	}                                                                                    \
                                                                                          \
 	TYPE* FPX##_get(TYPE##_array_list_t* const instance, TYPE* const item,               \
 					TYPE##_comparator cmp) {                                             \
-		const bool contains_data =                                                       \
-			(instance && instance->data && instance->capacity > 1UL);                    \
+		const bool contains_data = (instance && instance->capacity > g_EMPTY_LIST);      \
                                                                                          \
-		if (contains_data && item) {                                                     \
+		const bool can_search_for_item = (contains_data && item && cmp);                 \
+                                                                                         \
+		if (can_search_for_item) {                                                       \
 			array_list_size_t capacity = instance->capacity;                             \
                                                                                          \
 			for (array_list_size_t i = 0UL; i < capacity; ++i) {                         \
@@ -149,7 +147,7 @@
 	}                                                                                    \
                                                                                          \
 	void* FPX##_add(TYPE##_array_list_t* const instance, TYPE* const item) {             \
-		if (instance) {                                                                  \
+		if (instance && item) {                                                          \
 			array_list_size_t new_capacity = instance->capacity + 1UL;                   \
                                                                                          \
 			if (new_capacity > instance->size) {                                         \
@@ -187,6 +185,64 @@
 		free(instance);                                                                  \
                                                                                          \
 		instance = NULL;                                                                 \
+	}                                                                                    \
+                                                                                         \
+	TYPE##_array_list_iter_t* FPX##_iter_new(TYPE##_array_list_t* const instance) {      \
+		if (!FPX##_is_empty(instance)) {                                                 \
+			TYPE##_array_list_iter_t* itr = malloc(sizeof(TYPE##_array_list_iter_t));    \
+                                                                                         \
+			itr->current_index = g_FIRST_ITEM;                                           \
+                                                                                         \
+			itr->target = instance;                                                      \
+                                                                                         \
+			itr->cursor = instance->data[g_FIRST_ITEM];                                  \
+                                                                                         \
+			return itr;                                                                  \
+		}                                                                                \
+                                                                                         \
+		return NULL;                                                                     \
+	}                                                                                    \
+                                                                                         \
+	bool FPX##_iter_has_next(const TYPE##_array_list_iter_t* const itr) {                \
+		const bool has_valid_pointers = itr && itr->target;                              \
+                                                                                         \
+		return (has_valid_pointers && (itr->current_index < (itr->target)->capacity));   \
+	}                                                                                    \
+                                                                                         \
+	TYPE* FPX##_iter_next(TYPE##_array_list_iter_t* const itr) {                         \
+		if (FPX##_iter_has_next(itr)) {                                                  \
+			TYPE* current = NULL;                                                        \
+                                                                                         \
+			if (itr->current_index != g_FIRST_ITEM) {                                    \
+				itr->cursor = itr->target->data[itr->current_index];                     \
+                                                                                         \
+				++itr->current_index;                                                    \
+                                                                                         \
+				current = itr->cursor;                                                   \
+                                                                                         \
+			} else {                                                                     \
+				TYPE* first_item = itr->cursor;                                          \
+                                                                                         \
+				current = first_item;                                                    \
+                                                                                         \
+				++itr->current_index;                                                    \
+			}                                                                            \
+                                                                                         \
+			return current;                                                              \
+		}                                                                                \
+                                                                                         \
+		return NULL;                                                                     \
+	}                                                                                    \
+                                                                                         \
+	void FPX##_iter_free(TYPE##_array_list_iter_t* itr) {                                \
+		if (itr) {                                                                       \
+			itr->cursor = NULL;                                                          \
+			itr->target = NULL;                                                          \
+                                                                                         \
+			free(itr);                                                                   \
+                                                                                         \
+			itr = NULL;                                                                  \
+		}                                                                                \
 	}                                                                                    \
                                                                                          \
 	MAP_SOURCE(FPX, TYPE##_array_list, TYPE)
