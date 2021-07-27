@@ -57,7 +57,8 @@ int main() {
 
 	// instantiates a new map instance for the array-list's type
 	// ends up copying pointers from ns to ns'
-	int_array_list_t* ns_ = int_array_list_map(make_empty_int_list, ns_itr, identity_p);
+	int_array_list_t* ns_ =
+		int_array_list_map(make_empty_int_list, ns_itr, int_identity_ptr);
 
 	// frees the memory for the iterator only
 	int_list_iter_free(ns_itr);
