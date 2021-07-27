@@ -1,11 +1,11 @@
 #pragma once
 
 #define IDENTITY(TYPE)                                                                   \
-	TYPE identity(TYPE type) {                                                           \
+	TYPE TYPE##_identity(TYPE type) {                                                    \
 		return type;                                                                     \
 	}
 
 #define IDENTITY_PTR(TYPE)                                                               \
-	TYPE* identity_p(TYPE* type) {                                                       \
+	TYPE* TYPE##_identity_ptr(TYPE* type) {                                              \
 		return type;                                                                     \
 	}

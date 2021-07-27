@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdbool.h>
-
 #define ITERATOR(FPX, CONTAINER, VALUE)                                                  \
 	typedef struct CONTAINER##_iter_t CONTAINER##_iter_t;                                \
                                                                                          \
