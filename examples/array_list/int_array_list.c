@@ -18,3 +18,9 @@ comparison_result_t int_comparison(const int* const left, const int* const right
 
 	return EMPTY_VALUES;
 }
+
+void int_deleter(int* const n) {
+	if (n) {
+		free(n);
+	}
+}

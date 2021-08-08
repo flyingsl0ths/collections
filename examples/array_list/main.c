@@ -66,19 +66,17 @@ int main() {
 	// creates a new iterator for ns_
 	int_array_list_iter_t* ns_itr_ = int_list_iter_new(ns_);
 
-	bool has_more_items = int_list_iter_has_next(ns_itr_);
-
 	// iterates 'array-list capacity' times
-	while (has_more_items) {
+	while (int_list_iter_has_next(ns_itr_)) {
 		int* current = int_list_iter_next(ns_itr_);
 
 		printf("Item: %d\n", *current);
-
-		has_more_items = int_list_iter_has_next(ns_itr_);
 	}
 
 	puts("");
 
 	// only call free on ns not ns_ otherwise "double free" error
-	int_list_free(ns);
+	// must pass a 'deleter' function otherwise the item will only be detached from the
+	// list and only the memory used by the list will be freed
+	int_list_free(ns, int_deleter);
 }
