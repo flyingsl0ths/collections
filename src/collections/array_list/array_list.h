@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "../../interfaces/comparator/comparator.h"
+#include "../../interfaces/destructor/destructor.h"
 #include "../../interfaces/iterator/iterator.h"
 #include "../transformations/map.h"
 
@@ -11,6 +12,8 @@
 	typedef size_t array_list_size_t;                                                    \
                                                                                          \
 	typedef struct TYPE##_array_list_t TYPE##_array_list_t;                              \
+                                                                                         \
+	DESTRUCTOR_OF(TYPE)                                                                  \
                                                                                          \
 	COMPARATOR_OF(TYPE)                                                                  \
                                                                                          \
@@ -23,29 +26,30 @@
                                                                                          \
 	void* FPX##_add(TYPE##_array_list_t* const instance, TYPE* const item);              \
                                                                                          \
+	TYPE* FPX##_remove(TYPE##_array_list_t* const instance,                              \
+					   const array_list_size_t index);                                   \
+                                                                                         \
 	array_list_size_t FPX##_capacity(const TYPE##_array_list_t* const instance);         \
                                                                                          \
 	array_list_size_t FPX##_size(const TYPE##_array_list_t* const instance);             \
                                                                                          \
-	bool FPX##_is_empty(const TYPE##_array_list_t* const instance);                      \
-                                                                                         \
-	void FPX##_free(TYPE##_array_list_t* instance);                                      \
+	void FPX##_free(TYPE##_array_list_t* instance, TYPE##_destructor destructor);        \
                                                                                          \
 	ITERATOR(FPX, TYPE##_array_list, TYPE)                                               \
                                                                                          \
 	MAP_HEADER(FPX, TYPE##_array_list, TYPE)
 
-#define MEMORY_UTILS_FOR_LIST_OF(TYPE)                                                   \
-	void freeArray(TYPE** buffer, size_t capacity) {                                     \
+#define MEMORY_UTILS_FOR_LIST_OF(FPX, TYPE)                                              \
+	void FPX##_clear(TYPE** buffer, size_t capacity, TYPE##_destructor destructor) {     \
 		if (buffer) {                                                                    \
 			for (size_t i = 0UL; i < capacity; ++i) {                                    \
 				TYPE* current = buffer[i];                                               \
                                                                                          \
 				if (current) {                                                           \
-					free(current);                                                       \
-                                                                                         \
-					current = NULL;                                                      \
+					destructor(current);                                                 \
 				}                                                                        \
+                                                                                         \
+				current = NULL;                                                          \
 			}                                                                            \
                                                                                          \
 			free(buffer);                                                                \
@@ -54,8 +58,10 @@
 		}                                                                                \
 	}                                                                                    \
                                                                                          \
-	TYPE** resizeArray(TYPE** old_buffer, const size_t old_size,                         \
-					   const size_t new_size) {                                          \
+	TYPE** FPX##_resize(TYPE** old_buffer, const size_t old_size,                        \
+						const size_t new_size) {                                         \
+		TYPE** resized = NULL;                                                           \
+                                                                                         \
 		if (old_buffer) {                                                                \
 			if (old_size < new_size) {                                                   \
 				TYPE** new_buffer = malloc(sizeof(TYPE*) * new_size);                    \
@@ -68,10 +74,11 @@
                                                                                          \
 				free(old_buffer);                                                        \
                                                                                          \
-				return new_buffer;                                                       \
+				resized = new_buffer;                                                    \
 			}                                                                            \
 		}                                                                                \
-		return NULL;                                                                     \
+                                                                                         \
+		return resized;                                                                  \
 	}
 
 #define ARRAY_LIST_STRUCT_DEFS(TYPE)                                                     \
@@ -98,7 +105,7 @@
                                                                                          \
 	ARRAY_LIST_STRUCT_DEFS(TYPE)                                                         \
                                                                                          \
-	MEMORY_UTILS_FOR_LIST_OF(TYPE)                                                       \
+	MEMORY_UTILS_FOR_LIST_OF(FPX, TYPE)                                                  \
                                                                                          \
 	TYPE##_array_list_t* FPX##_new(const array_list_size_t size) {                       \
 		TYPE##_array_list_t* instance = malloc(sizeof(TYPE##_array_list_t));             \
@@ -119,8 +126,8 @@
 	}                                                                                    \
                                                                                          \
 	TYPE* FPX##_at(TYPE##_array_list_t* const instance, const array_list_size_t index) { \
-		return (instance && (index < instance->capacity) ? (instance->data[index])       \
-														 : NULL);                        \
+		return ((instance && (index < instance->capacity)) ? (instance->data[index])     \
+														   : NULL);                      \
 	}                                                                                    \
                                                                                          \
 	TYPE* FPX##_get(TYPE##_array_list_t* const instance, TYPE* const item,               \
@@ -153,10 +160,14 @@
 			if (new_capacity > instance->size) {                                         \
 				array_list_size_t new_size = (instance->size * g_BUFFER_SCALAR);         \
                                                                                          \
-				instance->data =                                                         \
-					resizeArray(instance->data, instance->capacity, new_size);           \
+				TYPE** resized =                                                         \
+					FPX##_resize(instance->data, instance->capacity, new_size);          \
                                                                                          \
-				instance->size = new_size;                                               \
+				if (resized) {                                                           \
+					instance->data = resized;                                            \
+                                                                                         \
+					instance->size = new_size;                                           \
+				}                                                                        \
 			}                                                                            \
                                                                                          \
 			instance->data[instance->capacity] = item;                                   \
@@ -167,6 +178,18 @@
 		return NULL;                                                                     \
 	}                                                                                    \
                                                                                          \
+	TYPE* FPX##_remove(TYPE##_array_list_t* const instance,                              \
+					   const array_list_size_t index) {                                  \
+                                                                                         \
+		TYPE* item = FPX##_at(instance, index);                                          \
+                                                                                         \
+		if (item) {                                                                      \
+			instance->data[index] = NULL;                                                \
+		}                                                                                \
+                                                                                         \
+		return item;                                                                     \
+	}                                                                                    \
+                                                                                         \
 	array_list_size_t FPX##_capacity(const TYPE##_array_list_t* const instance) {        \
 		return (instance ? instance->capacity : g_EMPTY_LIST);                           \
 	}                                                                                    \
@@ -175,20 +198,25 @@
 		return (instance ? instance->size : g_EMPTY_LIST);                               \
 	}                                                                                    \
                                                                                          \
-	bool FPX##_is_empty(const TYPE##_array_list_t* const instance) {                     \
-		return (instance && instance->capacity == g_EMPTY_LIST);                         \
-	}                                                                                    \
+	void FPX##_free(TYPE##_array_list_t* instance, TYPE##_destructor destructor) {       \
+		if (instance && (instance->capacity > g_EMPTY_LIST) && destructor) {             \
+			FPX##_clear(instance->data, instance->capacity, destructor);                 \
                                                                                          \
-	void FPX##_free(TYPE##_array_list_t* instance) {                                     \
-		freeArray(instance->data, instance->capacity);                                   \
+			free(instance);                                                              \
                                                                                          \
-		free(instance);                                                                  \
+			instance = NULL;                                                             \
                                                                                          \
-		instance = NULL;                                                                 \
+		} else if (instance && (instance->capacity == g_EMPTY_LIST) && !destructor) {    \
+			free(instance->data);                                                        \
+                                                                                         \
+			free(instance);                                                              \
+                                                                                         \
+			instance = NULL;                                                             \
+		}                                                                                \
 	}                                                                                    \
                                                                                          \
 	TYPE##_array_list_iter_t* FPX##_iter_new(TYPE##_array_list_t* const instance) {      \
-		if (!FPX##_is_empty(instance)) {                                                 \
+		if (instance && (instance->capacity > g_EMPTY_LIST)) {                           \
 			TYPE##_array_list_iter_t* itr = malloc(sizeof(TYPE##_array_list_iter_t));    \
                                                                                          \
 			itr->current_index = g_FIRST_ITEM;                                           \
