@@ -17,22 +17,20 @@
 											 CONTAINER_NAME##_iter_t* const itr,         \
 											 CONTAINER_VALUE_TYPE##_consumer f) {        \
                                                                                          \
-		CONTAINER_NAME##_t* acc = supplier();                                            \
+		CONTAINER_NAME##_t* const acc = supplier();                                      \
                                                                                          \
 		const bool can_perform_mapping = (itr && f && supplier);                         \
                                                                                          \
 		if (can_perform_mapping) {                                                       \
                                                                                          \
-			bool has_more_items = FPX##_iter_has_next(itr);                              \
-                                                                                         \
-			while (has_more_items) {                                                     \
+			while (FPX##_iter_has_next(itr)) {                                           \
 				CONTAINER_VALUE_TYPE* value = FPX##_iter_next(itr);                      \
                                                                                          \
-				if (value) {                                                             \
-					FPX##_add(acc, f(value));                                            \
-				}                                                                        \
+				CONTAINER_VALUE_TYPE* mapped_value = f(value);                           \
                                                                                          \
-				has_more_items = FPX##_iter_has_next(itr);                               \
+				if (mapped_value != value) {                                             \
+					FPX##_add(acc, mapped_value);                                        \
+				}                                                                        \
 			}                                                                            \
 		}                                                                                \
                                                                                          \
